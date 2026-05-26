@@ -1,0 +1,14 @@
+{
+  "name": "dragontap",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": { "node": ">=22" },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild"] },
+  "scripts": {
+    "dev": "pnpm --filter @dragontap/web dev",
+    "build": "pnpm --filter @dragontap/web build",
+    "preview": "pnpm --filter @dragontap/web preview",
+    "typecheck": "pnpm --filter @dragontap/web exec tsc -b",
+    "test": "pnpm --filter @dragontap/web test"
+  }
+}
