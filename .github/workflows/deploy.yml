@@ -1,7 +1,7 @@
 name: Deploy to R2
 
 # Path B hosting: builds the game on every push to main and uploads web/dist/
-# to the shared fas-apps R2 bucket at games/<repo>/. The freegamestore-host
+# to the shared fgs-games R2 bucket at games/<repo>/. The freegamestore-host
 # Worker on *.freegamestore.online reads this prefix to serve the game — no
 # per-game CF Pages project needed.
 #
@@ -52,7 +52,7 @@ jobs:
           AWS_DEFAULT_REGION: auto
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         run: |
-          aws s3 sync ./web/dist "s3://fas-apps/games/${GITHUB_REPOSITORY##*/}/" \
+          aws s3 sync ./web/dist "s3://fgs-games/games/${GITHUB_REPOSITORY##*/}/" \
             --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
             --delete \
             --no-progress
