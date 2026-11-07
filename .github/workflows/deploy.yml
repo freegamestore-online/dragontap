@@ -1,59 +1,25 @@
-name: Deploy to R2
-
-# Path B hosting: builds the game on every push to main and uploads web/dist/
-# to the shared fgs-games R2 bucket at games/<repo>/. The freegamestore-host
-# Worker on *.freegamestore.online reads this prefix to serve the game — no
-# per-game CF Pages project needed.
-#
-# Org-level secrets required (set once on the freegamestore-online GitHub org):
-#   - R2_ACCESS_KEY_ID
-#   - R2_SECRET_ACCESS_KEY
-#   - R2_ACCOUNT_ID
+name: CI / Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+# Most-recent push/PR for a ref wins; older runs are cancelled so a deploy
+# never wins a race against a fresh build of the same branch.
 concurrency:
-  group: deploy-${{ github.repository }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  ci-and-deploy:
+    # A template repo ships this file to the games made from it but is not a
+    # game: it has no route to deploy to and its placeholders fail `fgs check`.
+    if: ${{ !github.event.repository.is_template }}
+    uses: freegamestore-online/ci-workflows/.github/workflows/game-deploy.yml@8d03ac1919f7d3b7dc114baacb19d8b60118cde4
+    # The deploy job uploads with a GitHub OIDC token; no R2 secret (#488).
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Verify build output
-        run: |
-          test -d ./web/dist || { echo "::error::No build output at web/dist"; exit 1; }
-          test -n "$(ls -A ./web/dist)" || { echo "::error::web/dist is empty"; exit 1; }
-
-      - name: Upload to R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-        run: |
-          aws s3 sync ./web/dist "s3://fgs-games/games/${GITHUB_REPOSITORY##*/}/" \
-            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
-            --delete \
-            --no-progress
-          echo "Deployed games/${GITHUB_REPOSITORY##*/} from ${GITHUB_SHA::7}"
+      id-token: write
